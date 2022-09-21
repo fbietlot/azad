@@ -62,6 +62,7 @@ interface IOrderDetails {
     refund: string;
     who: string;
     invoice_url: string;
+    discount: string;
 
     [index: string]: string;
 };
@@ -173,7 +174,29 @@ function extractDetailFromDoc(
         }
         return util.defaulted(a, '');
     };
+ 
     
+    const discount = function(): string {
+        const a = extraction.by_regex(
+            [
+                '//div[contains(@id,"od-subtotals")]//' +
+                '*[contains(text(),"Bon de réduction")]' +
+                '/parent::div/following-sibling::div/span'
+            ],
+            null,
+            null,
+            doc.documentElement,
+            context,
+        );
+        if (a) {
+            const whitespace = /[\n\t ]/g;
+            return a.replace(/^.*:/, '')
+                    .replace(/[\n\t ]/g, '')  // whitespace
+                    .replace('-', '');
+        }
+        return util.defaulted(a, '');
+    };
+
     // TODO Need to exclude gift wrap
     const gift = function(): string {
         const a = extraction.by_regex(
@@ -418,6 +441,7 @@ function extractDetailFromDoc(
         refund: refund(),
         who: who(),
         invoice_url: invoice_url(),
+        discount : discount()
     };
 
     return details;
@@ -494,6 +518,7 @@ export interface IOrder extends azad_entity.IEntity {
     us_tax(): Promise<string>;
     vat(): Promise<string>;
     who(): Promise<string>;
+    discount(): Promise<string>;
 
     assembleDiagnostics(): Promise<Record<string,any>>;
 };
@@ -603,6 +628,9 @@ class Order {
     }
     refund(): Promise<string> {
         return this._detail_dependent_promise( detail => detail.refund )
+    }
+    discount(): Promise<string> {
+        return this._detail_dependent_promise( detail => detail.discount )
     }
     invoice_url(): Promise<string> {
         return this._detail_dependent_promise( detail => detail.invoice_url )
