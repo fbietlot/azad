@@ -735,7 +735,8 @@ class OrderImpl {
                     resolve: (payments: string[]) => void,
                     reject: (msg: string) => void
                 ) => {
-                    if (this.id?.startsWith('D')) {
+                    if ((this.id?.startsWith('D')) && (this.total==='1 crédit audio')) {
+                        // There is no payement method for Digital Order paid with Credit Audi
                         resolve([
                             this.total ?
                                 util.defaulted(this.date, '') + 
