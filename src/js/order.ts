@@ -55,6 +55,7 @@ interface IOrderDetails {
     postage: string;
     postage_refund: string;
     gift: string;
+    discount: string;
     us_tax: string;
     vat: string;
     gst: string;
@@ -205,7 +206,26 @@ function extractDetailFromDoc(
         }
         return '';
     };
-
+    const discount = function(): string {
+        const a = extraction.by_regex(
+            [
+                '//div[contains(@id,"od-subtotals")]//' +
+                '*[contains(text(),"Bon de réduction")]' +
+                '/parent::div/following-sibling::div/span'
+            ],
+            null,
+            null,
+            doc.documentElement,
+            context,
+        );
+        if (a) {
+            const whitespace = /[\n\t ]/g;
+            return a.replace(/^.*:/, '')
+                    .replace(/[\n\t ]/g, '')  // whitespace
+                    .replace('-', '');
+        }
+        return util.defaulted(a, '');
+    };
     const postage = function(): string {
         return util.defaulted(
             extraction.by_regex(
@@ -411,6 +431,7 @@ function extractDetailFromDoc(
         postage: postage(),
         postage_refund: postage_refund(),
         gift: gift(),
+        discount : discount(),
         us_tax: us_tax(),
         vat: vat(),
         gst: cad_gst(),
@@ -481,6 +502,7 @@ export interface IOrder extends azad_entity.IEntity {
 
     date(): Promise<string>;
     gift(): Promise<string>;
+    discount(): Promise<string>;
     gst(): Promise<string>;
     item_list(): Promise<item.IItem[]>;
     items(): Promise<item.Items>;
@@ -589,6 +611,9 @@ class Order {
     gift(): Promise<string> {
         return this._detail_dependent_promise( detail => detail.gift );
     };
+    discount(): Promise<string> {
+        return this._detail_dependent_promise( detail => detail.discount )
+    }
     us_tax(): Promise<string> {
         return this._detail_dependent_promise( detail => detail.us_tax )
     }
