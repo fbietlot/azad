@@ -735,15 +735,14 @@ class OrderImpl {
                     resolve: (payments: string[]) => void,
                     reject: (msg: string) => void
                 ) => {
-                    if ((this.id?.startsWith('D')) && (this.total==='1 crédit audio')) {
-                        // There is no payement method for Digital Order paid with Credit Audio
+                    if (this.id?.startsWith('D')) {
                         resolve([
                             this.total ?
                                 util.defaulted(this.date, '') + 
                                 ': ' + util.defaulted(this.total, '') :
                                 util.defaulted(this.date, '')
                         ]);
-                    } else  {    
+                    } else {
                         const event_converter = function(evt: any) {
                             const doc = util.parseStringToDOM( evt.target.responseText );
                             const payments = extraction.payments_from_invoice(doc);

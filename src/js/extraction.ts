@@ -73,56 +73,6 @@ export function payments_from_invoice(doc: HTMLDocument): string[] {
         });
         return payments;
     };
-    const strategy_3 = () => {
-        // This strategy is used to get payement method from Amazon.fr where Card BANCONTAVT is used
-        const payments: string[] = util.findMultipleNodeValues(
-            '//*[contains(text(), "Mode de paiement")]/../span',
-            doc.documentElement
-        ).map(function(row){
-            return util.defaulted(
-                row.textContent
-                  ?.replace(/[\n\r]/g, ' ')
-                   .replace(/  */g, '\xa0')  //&nbsp;
-                   .trim(),
-                ''
-            );
-        });
-        return payments;
-    };
-    const strategy_4 = () => {
-        // This strategy is used to get paiment VISA for amazon.fr Digital order  D
-        const new_style_payments_node = util.findMultipleNodeValues(
-            '//*[contains(text(), "Mode de paiement")]/../..//li/span',
-            doc.documentElement
-        );
-        const el =  new_style_payments_node.map( e =>  (e as HTMLElement).innerHTML?.replace(/\s+/g, ' ').trim());
-        //"<img alt=\"Visa / Electron\" src=\"https://images-eu.ssl-images-amazon.com/images/G/08/payments-portal/r1/issuer-images/visa._CB413173755_.png\" class=\"pmts-payment-credit-card-instrument-logo\"><span class=\"a-letter-space\"></span><span class=\"a-color-base\">***-7346</span>"
-        const map_payment_field = function(pattern: string) {
-            return el.map(
-                function(s) {
-                    const x = RegExp(pattern);
-                    const y = x.exec(util.defaulted(s , ''));
-                    if (y == null) {
-                        return '';
-                    }
-                    return y[1].trim();
-                }
-            );
-        }
-        const card_names: string[] = map_payment_field(
-            'alt="([A-Za-z0-9 /]*)" src'
-        );
-        const card_number_suffixes = map_payment_field(
-            '(\\*{3}-\\d{4})'
-        );
-        const count = Math.min( ...[card_names, card_number_suffixes].map( l => l.length ) );
-        const payments = [];
-        let i = 0;
-        for ( i = 0; i < count; i++ ) {
-            payments.push( card_names[i] + ' ending in ' + card_number_suffixes[i] );
-        }
-        return payments;
-    };
     const strategy_2 = () => {
         const new_style_payments = util.findMultipleNodeValues(
             '//*[contains(text(), "Payment Method")]/../self::*',
@@ -161,7 +111,7 @@ export function payments_from_invoice(doc: HTMLDocument): string[] {
         }
         return payments;
     };
-    const strategies = [strategy_1, strategy_2, strategy_4, strategy_3];
+    const strategies = [strategy_1, strategy_2];
     let i: number = 0;
     for ( i = 0; i < strategies.length; i++ ) {
         const strategy = strategies[i];
