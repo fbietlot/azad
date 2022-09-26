@@ -98,17 +98,7 @@ function extractDetailFromDoc(
                         context,
                     );
                     if ( !x ) {
-                        // Digital Kindle for amazon.fr
-                        x = extraction.by_regex(
-                            ['//b[contains(text(),"Destinataire")]/..'],
-                            /Destinataire :(.*?)\\.*/,
-                            null,
-                            doc.documentElement,
-                            context,
-                        );
-                        if ( !x ) {
                             x = 'null';
-                        }
                     }
                 }
             }
