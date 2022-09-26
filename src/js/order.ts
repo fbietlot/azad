@@ -71,7 +71,7 @@ function extractDetailFromDoc(
     order: OrderImpl, doc: HTMLDocument
 ): IOrderDetails {
     const context = 'id:' + order.id;
-    const who = function(){
+    const who = function() : string{
         if(order.who) {
             return order.who;
         }
@@ -98,7 +98,7 @@ function extractDetailFromDoc(
                         context,
                     );
                     if ( !x ) {
-                        x = 'null';
+                            x = 'null';
                     }
                 }
             }
@@ -550,7 +550,8 @@ class Order {
         return this._detail_dependent_promise(detail => detail.total);
     }
     who(): Promise<string> {
-        return Promise.resolve(util.defaulted(this.impl.who, ''));
+        //return Promise.resolve(util.defaulted(this.impl.who, ''));
+        return this._detail_dependent_promise(detail => detail.who);
     }
     items(): Promise<item.Items> {
         const items: item.Items = {}; 
