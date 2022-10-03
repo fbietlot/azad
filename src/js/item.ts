@@ -34,11 +34,11 @@ export function extractItems(
 ): IItem[] {
     const strategies: ItemsExtractor[] = [
         strategy0,
+        strategy4,
         strategy1,
         strategy2,
         strategy3,
-        strategy4
-    ];
+     ];
     for (let i=0; i!=strategies.length; i+=1) {
         const strategy: ItemsExtractor = strategies[i];
         try {
@@ -47,14 +47,14 @@ export function extractItems(
                 order_date,
                 order_detail_url,
                 order_elem,
-                context + ';extractItems:strategy:' + i,
+                context + ';extractItems:' + strategy.name,
             );
             if (items.length) {
-                items.map(item => item.stat_strategy = 'strategy:' + i)
+                items.map(item => item.stat_strategy = strategy.name)
                 return items;
             }
         } catch (ex) {
-            console.error('strategy' + i.toString() + ' ' + ex);
+            console.error(strategy.name + ' ' + ex);
         }
     }
     return [];
@@ -220,9 +220,12 @@ function strategy4(
             url = util.defaulted(link.getAttribute('href'), '').trim();
         }
         catch{};
-        let debug_regex : RegExp = /<b>(.*?)<\/b>(.*?)<br>/;
+        let debug_regex : RegExp = /<b>\s*(?:<a.+?>)?(.*?)(?:<\/[ab]>)+(\[.*?])\s*<br>\s*(De : .*)?.*<br>/;
         const description_match = (<HTMLElement>itemElem)?.innerHTML?.match(debug_regex);
-        description = util.defaulted(description_match[1], '').trim() + util.defaulted(description_match[2], '').trim();
+        description = 
+            util.defaulted(description_match?.[1], '').trim() + ' ' 
+            + util.defaulted(description_match?.[3], '').trim() + ' '
+            + util.defaulted(description_match?.[2], '').trim();
         debug_regex =  /Qty: | Qté\s:\s(\d+)/;
         const qty_match = (<HTMLElement>itemElem)?.textContent?.match(debug_regex);
         const sqty = qty_match ? qty_match[1] : '1';
