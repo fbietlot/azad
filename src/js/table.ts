@@ -265,6 +265,10 @@ const ITEM_COLS: ColSpec[] = [
         field_name: 'price',
         value_promise_func_name: 'price',
         is_numeric: false
+    }, {
+        field_name: 'stat_strategy',
+        value_promise_func_name: 'stat_strategy',
+        is_numeric: false
     }
 ];
 
