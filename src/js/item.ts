@@ -12,6 +12,7 @@ export interface IItem extends azad_entity.IEntity {
     price: string;
     quantity: number;
     url: string;
+    stat_strategy : string
 };
 
 export type Items = Record<string, string>;
@@ -49,6 +50,7 @@ export function extractItems(
                 context + ';extractItems:strategy:' + i,
             );
             if (items.length) {
+                items.map(item => item.stat_strategy = 'strategy:' + i)
                 return items;
             }
         } catch (ex) {
