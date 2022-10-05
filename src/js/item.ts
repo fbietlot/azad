@@ -12,6 +12,7 @@ export interface IItem extends azad_entity.IEntity {
     price: string;
     quantity: number;
     url: string;
+    seller : string;
     stat_strategy : string
 };
 
@@ -85,6 +86,14 @@ function strategy0(
         );
         const description = util.defaulted(link.textContent, '').trim();
         const url = util.defaulted(link.getAttribute('href'), '').trim();
+        
+        const seller_node = <HTMLElement>util.findSingleNodeValue(
+            './/span[contains(text(),"Sold") or contains(text(),"Vendu") or contains(text(),"Verkauf")]',
+            <HTMLElement>itemElem,
+            context,
+        );
+        const seller_match = seller_node?.textContent.match(/\s*(?:(?:Vendu par : )|(?:Sold by:)|(?:Verkauf durch:))\s*(.*)/);
+        const seller : string = util.defaulted(seller_match?.[1], '').trim();
         let qty: number = 0;
         try {
             qty = parseInt(
@@ -122,6 +131,7 @@ function strategy0(
             price: price,
             quantity: qty,
             url: url,
+            seller:seller,
         } 
     });
     return items;
@@ -226,6 +236,9 @@ function strategy4(
             util.defaulted(description_match?.[1], '').trim() + ' ' 
             + util.defaulted(description_match?.[3], '').trim() + ' '
             + util.defaulted(description_match?.[2], '').trim();
+        debug_regex = /(?:(?:Vendu par : )|(?:Sold by:)|(?:Verkauf durch:))(.*?)<br>/;
+        const seller_match = (<HTMLElement>itemElem)?.innerHTML?.match(debug_regex);
+        const seller : string = util.defaulted(seller_match?.[1], '').trim();
         debug_regex =  /Qty: | Qté\s:\s(\d+)/;
         const qty_match = (<HTMLElement>itemElem)?.textContent?.match(debug_regex);
         const sqty = qty_match ? qty_match[1] : '1';
@@ -240,6 +253,7 @@ function strategy4(
             price: price,
             quantity: qty,
             url: url,
+            seller: seller,
         } 
     });
     return items;

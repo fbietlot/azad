@@ -690,7 +690,7 @@ class OrderImpl {
             throw error;
         }
 // UNCOMMENT TO DEBUG
-if(!this.id.startsWith("D01")){return};
+//if(!this.id.startsWith("D01")){return};
 
         const context = 'id:' + this.id;
         this.date = date.normalizeDateString(
