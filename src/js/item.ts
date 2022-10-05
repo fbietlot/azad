@@ -1,5 +1,6 @@
 /* Copyright(c) 2017-2021 Philip Mulcahy. */
 
+import { match } from 'assert';
 import * as azad_entity from './entity';
 import * as util from './util';
 
@@ -11,6 +12,8 @@ export interface IItem extends azad_entity.IEntity {
     price: string;
     quantity: number;
     url: string;
+    seller : string;
+    stat_strategy : string
 };
 
 export type Items = Record<string, string>;
@@ -32,10 +35,11 @@ export function extractItems(
 ): IItem[] {
     const strategies: ItemsExtractor[] = [
         strategy0,
+        strategy4,
         strategy1,
         strategy2,
         strategy3,
-    ];
+     ];
     for (let i=0; i!=strategies.length; i+=1) {
         const strategy: ItemsExtractor = strategies[i];
         try {
@@ -44,13 +48,14 @@ export function extractItems(
                 order_date,
                 order_detail_url,
                 order_elem,
-                context + ';extractItems:strategy:' + i,
+                context + ';extractItems:' + strategy.name,
             );
             if (items.length) {
+                items.map(item => item.stat_strategy = strategy.name)
                 return items;
             }
         } catch (ex) {
-            console.error('strategy' + i.toString() + ' ' + ex);
+            console.error(strategy.name + ' ' + ex);
         }
     }
     return [];
@@ -81,6 +86,14 @@ function strategy0(
         );
         const description = util.defaulted(link.textContent, '').trim();
         const url = util.defaulted(link.getAttribute('href'), '').trim();
+        
+        const seller_node = <HTMLElement>util.findSingleNodeValue(
+            './/span[contains(text(),"Sold") or contains(text(),"Vendu") or contains(text(),"Verkauf")]',
+            <HTMLElement>itemElem,
+            context,
+        );
+        const seller_match = seller_node?.textContent.match(/\s*(?:(?:Vendu par : )|(?:Sold by:)|(?:Verkauf durch:))\s*(.*)/);
+        const seller : string = util.defaulted(seller_match?.[1], '').trim();
         let qty: number = 0;
         try {
             qty = parseInt(
@@ -118,6 +131,7 @@ function strategy0(
             price: price,
             quantity: qty,
             url: url,
+            seller:seller,
         } 
     });
     return items;
@@ -132,29 +146,41 @@ function strategy1(
     context: string,
 ): IItem[] {
     const itemElems: Node[] = util.findMultipleNodeValues(
-        '//*[contains(text(), "Ordered") or contains(text(), "Commandé")]/parent::*/parent::*/parent::*',
+        '//*[contains(text(), "Ordered")'
+        + 'or contains(text(), "Commandé") or contains(text(), "commandé")'
+        + ']/parent::*/parent::*/parent::*',
         order_elem
     );
     const items: IItem[] = <IItem[]>itemElems.map( itemElem => {
         let link = <HTMLElement>util.findSingleNodeValue(
             './/a[contains(@href, "/dp/")]',
+/* move to strategy4
+            +' | .//b[contains(text(), "audio")]', // For Audible Subscription (amazon.fr : OK - Others to be checked)
+*/
             <HTMLElement>itemElem,
             context,
         );
         const description = util.defaulted(link.textContent, '').trim();
         const url = util.defaulted(link.getAttribute('href'), '').trim();
+        let debug_regex : RegExp = /Qty: | Qté\s:\s(\d+)/;
         const qty_match = link.parentNode
                              ?.parentNode
                              ?.textContent
-                             ?.match(/Qty: (\d+)/);
+                             ?.match(debug_regex);
         const sqty = qty_match ? qty_match[1] : '1';
         const qty = parseInt(sqty);
-        const price_match = link.parentNode
+        let price_match = link.parentNode
                                ?.parentNode
                                ?.nextSibling
                                ?.nextSibling
                                ?.textContent
                                ?.match(util.moneyRegEx())
+        if  (!price_match){
+            price_match = (<HTMLElement>link.parentNode)
+                                ?.nextElementSibling
+                                ?.textContent
+                                ?.match(util.moneyRegEx())
+        };
         const price = price_match ? price_match[1] : '';
         return {
             description: description,
@@ -164,6 +190,70 @@ function strategy1(
             price: price,
             quantity: qty,
             url: url,
+        } 
+    });
+    return items;
+}
+
+
+// Digital orders with no link.
+// Let's try a (probably) more generic approach 
+function strategy4(
+    order_id: string,
+    order_date: string,
+    order_detail_url: string,
+    order_elem: HTMLElement,
+    context: string,
+): IItem[] {
+    const item_xpath = 
+        '//*[contains(text(), "Ordered") or contains(text(), "Commandé") or contains(text(), "commandé") ]' // Header of Items table
+        + '/parent::*/parent::*/parent::tbody/'                         // Items table
+        + 'tr[position()!=1 and position()<last()]/'                   // All rows of items expect header and footer
+        + '/td[1]';                                                       //the first cell with all info except the price
+    const findMultipleNodeValues = util.findMultipleNodeValues;
+    const itemElems: Node[] = findMultipleNodeValues(
+        item_xpath,
+        order_elem
+    );
+    const items: IItem[] = <IItem[]>itemElems.map( itemElem => {
+        let description:string;
+        let url : string;
+        let qty : number;
+        let price : string;
+
+        try{
+            const link : HTMLElement = <HTMLElement>util.findSingleNodeValue(
+                './/a[contains(@href, "/dp/")]',
+                <HTMLElement>itemElem,
+                context
+            );
+            url = util.defaulted(link.getAttribute('href'), '').trim();
+        }
+        catch{};
+        let debug_regex : RegExp = /<b>\s*(?:<a.+?>)?(.*?)(?:<\/[ab]>)+(\[.*?])\s*<br>\s*(De : .*)?.*<br>/;
+        const description_match = (<HTMLElement>itemElem)?.innerHTML?.match(debug_regex);
+        description = 
+            util.defaulted(description_match?.[1], '').trim() + ' ' 
+            + util.defaulted(description_match?.[3], '').trim() + ' '
+            + util.defaulted(description_match?.[2], '').trim();
+        debug_regex = /(?:(?:Vendu par : )|(?:Sold by:)|(?:Verkauf durch:))(.*?)<br>/;
+        const seller_match = (<HTMLElement>itemElem)?.innerHTML?.match(debug_regex);
+        const seller : string = util.defaulted(seller_match?.[1], '').trim();
+        debug_regex =  /Qty: | Qté\s:\s(\d+)/;
+        const qty_match = (<HTMLElement>itemElem)?.textContent?.match(debug_regex);
+        const sqty = qty_match ? qty_match[1] : '1';
+        qty = parseInt(sqty);
+        const price_match = (<HTMLElement>itemElem)?.nextElementSibling?.textContent?.match(util.moneyRegEx());
+        price = price_match ? price_match[1] : '';
+        return {
+            description: description,
+            order_date: order_date,
+            order_detail_url: order_detail_url,
+            order_id: order_id,
+            price: price,
+            quantity: qty,
+            url: url,
+            seller: seller,
         } 
     });
     return items;
