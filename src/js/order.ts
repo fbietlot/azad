@@ -177,7 +177,7 @@ function extractDetailFromDoc(
     
     // TODO Need to exclude gift wrap
     const gift = function(): string {
-        const a = extraction.by_regex(
+        let a = extraction.by_regex(
             [
                 '//div[contains(@id,"od-subtotals")]//' +
                 'span[contains(text(),"Gift") or contains(text(),"Importo Buono Regalo")]/' +
@@ -203,6 +203,18 @@ function extractDetailFromDoc(
             if (/\d/.test(a)) {
                 return a.replace('-', '');
             }
+        };
+        if( !a ){
+            a = extraction.by_regex(
+                [
+                    '//span[contains(text(),"Montant du chèque-cadeau")]/parent::div/following-sibling::div/span',
+                ],
+                util.moneyRegEx(),
+                null,
+                doc.documentElement,
+                context,
+            );
+            if (a) return util.defaulted(a, '');
         }
         return '';
     };
@@ -690,7 +702,7 @@ class OrderImpl {
             throw error;
         }
 // UNCOMMENT TO DEBUG
-//if(!this.id.startsWith("D01")){return};
+if(!this.id.startsWith("405-1576940-9193952")){return};
 
         const context = 'id:' + this.id;
         this.date = date.normalizeDateString(
